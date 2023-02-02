@@ -16,11 +16,6 @@ export const oldTax: TaxStructure = {
         },
         {
             incomeFrom: 500000,
-            incomeTo: 750000,
-            taxPercent: 15,
-        },
-        {
-            incomeFrom: 750000,
             incomeTo: 1000000,
             taxPercent: 20,
         },
