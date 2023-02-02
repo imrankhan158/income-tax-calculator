@@ -3,6 +3,7 @@ import { TaxStructure } from "./types"
 export const oldTax: TaxStructure = {
     deductionsApplicable: true,
     taxRebate: 500000,
+    displayName: "Old tax regime",
     slabs: [
         {
             incomeFrom: 0,
@@ -29,6 +30,7 @@ export const oldTax: TaxStructure = {
 export const newTax: TaxStructure = {
     deductionsApplicable: false,
     taxRebate: 700000,
+    displayName: "New tax regime",
     slabs: [
         {
             incomeFrom: 0,

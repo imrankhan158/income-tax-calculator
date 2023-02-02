@@ -1,17 +1,22 @@
 'use client';
 
-import { calculatorReducer, CalculatorState } from "@/utils/calculator";
+import { calculatorReducer, TaxResult } from "@/utils/calculator";
 import { FormEvent, useReducer, useState } from "react";
+import TaxBreakdown from "./moredetails";
+import TaxResultView from "./taxresult";
 
 export default function Calculator() {
     const [income, setIncome] = useState<string>('');
     const [deductions, setDeductions] = useState<string>('');
+    const [taxBreakdown, setTaxBreakdown] = useState<TaxResult | null>(null);
     const [state, dispatch] = useReducer(calculatorReducer, { isResultVisible: false });
+
     return (
         <div className='mt-2'>
             <form onSubmit={(event: FormEvent) => {
                 event.preventDefault();
-                dispatch({type: "form_submit", income: Number(income), deductions: Number(deductions)})
+                setTaxBreakdown(null);
+                dispatch({ type: "form_submit", income: Number(income), deductions: Number(deductions) });
             }}>
                 <div>
                     <label htmlFor="income" className="block text-sm font-medium text-gray-700 dark:text-white">Income</label>
@@ -28,22 +33,27 @@ export default function Calculator() {
             {(() => {
                 if (state.isResultVisible) {
                     return (
-                        <div>
-                            <div className='flex mt-4'>
-                                <div className='flex-1 p-2'>
-                                    <div className={`${state.oldTaxRegime?.isGreen ? 'bg-green-100' : 'bg-red-100'} rounded-md p-2 text-center ${state.oldTaxRegime?.isGreen ? 'text-green-900' : 'text-red-900'}`}>
-                                        <div>Old tax regime</div>
-                                        <div>₹{state.oldTaxRegime?.value}</div>
+                        <>
+                            <div>
+                                <div className='flex mt-4'>
+                                    <div className="flex-1">
+                                        <TaxResultView value={state.oldTaxRegime} onTaxBreakdownClicked={(value) => setTaxBreakdown(value)}/>
                                     </div>
-                                </div>
-                                <div className='flex-1 p-2'>
-                                <div className={`${state.newTaxRegime?.isGreen ? 'bg-green-100' : 'bg-red-100'} rounded-md p-2 text-center ${state.newTaxRegime?.isGreen ? 'text-green-900' : 'text-red-900'}`}>
-                                        <div>New tax regime</div>
-                                        <div>₹{state.newTaxRegime?.value}</div>
+                                    <div className="flex-1">
+                                        <TaxResultView value={state.newTaxRegime} onTaxBreakdownClicked={(value) => setTaxBreakdown(value)}/>
                                     </div>
                                 </div>
                             </div>
-                        </div>
+                            {(() => {
+                                if (taxBreakdown) {
+                                    return (
+                                        <div>
+                                            <TaxBreakdown value={taxBreakdown} />
+                                        </div>
+                                    )
+                                }
+                            })()}
+                        </>
                     )
                 }
             })()}

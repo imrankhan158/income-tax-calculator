@@ -1,16 +1,62 @@
 import { newTax, oldTax } from "./constants"
-import { TaxStructure } from "./types"
+import { TaxSlab, TaxStructure } from "./types"
+
+export type TaxResult = {
+    calc: TaxCalc,
+    isGreen: boolean,
+    source: TaxStructure,
+}
+
+export type TaxCalcStep = {
+    slab: TaxSlab,
+    displayName: string,
+    value: number,
+}
+export type TaxCalcDeduction = {
+    displayName: string,
+    value: number,
+}
+
+function calculateDisplayName(slab: TaxSlab): string {
+    if (slab.incomeTo) {
+        return `₹${slab.incomeFrom} to ₹${slab.incomeTo}`
+    } else {
+        return `Above ₹${slab.incomeFrom}`
+    }
+}
+
+class TaxCalc {
+    tax: number = 0;
+    slabSteps: TaxCalcStep[] = [];
+    income: number;
+    taxableIncome: number;
+    taxRebate: boolean = false;
+    deductions: TaxCalcDeduction[] = [];
+
+    constructor(income: number) {
+        this.income = income;
+        this.taxableIncome = income;
+    }
+
+    setTaxRebate(taxRebate: boolean) {
+        this.taxRebate = taxRebate;
+    }
+
+    applyDeductions(deduction: TaxCalcDeduction) {
+        this.taxableIncome = this.taxableIncome - deduction.value;
+        this.deductions.push(deduction) // { displayName: 'Deductions', value: deduction }
+    }
+
+    addTax(taxSlabStep: TaxCalcStep) {
+        this.tax += taxSlabStep.value;
+        this.slabSteps.push(taxSlabStep);
+    }
+}
 
 export type CalculatorState = {
     isResultVisible: boolean,
-    oldTaxRegime?: {
-        value: number,
-        isGreen: boolean,
-    },
-    newTaxRegime?: {
-        value: number,
-        isGreen: boolean,
-    }
+    oldTaxRegime?: TaxResult,
+    newTaxRegime?: TaxResult,
 }
 
 export type ReducerAction = {
@@ -19,43 +65,53 @@ export type ReducerAction = {
     deductions: number,
 }
 
-function calculateTax(taxStructure: TaxStructure, income: number, deductions: number) {
-    let taxableIncome = taxStructure.deductionsApplicable ? (income - deductions) : income;
-    if (taxableIncome <= taxStructure.taxRebate) {
-        return 0;
+function calculateTax(taxStructure: TaxStructure, income: number, deductions: number): TaxCalc {
+    let taxCalc = new TaxCalc(income);
+    if (taxStructure.deductionsApplicable) {
+        taxCalc.applyDeductions({ displayName: 'Deductions', value: deductions })
     }
-    let tax = 0;
+    if (taxCalc.taxableIncome <= taxStructure.taxRebate) {
+        taxCalc.setTaxRebate(true);
+        return taxCalc;
+    }
     for (let slab of taxStructure.slabs) {
-        if (taxableIncome > slab.incomeFrom) {
-            if (slab.incomeTo && taxableIncome <= slab.incomeTo) {
-                tax += (taxableIncome - slab.incomeFrom) * slab.taxPercent / 100;
-            } else if (slab.incomeTo && taxableIncome > slab.incomeTo) {
-                tax += (slab.incomeTo - slab.incomeFrom) * slab.taxPercent / 100;
-            } else if (!slab.incomeTo) {
-                tax += (taxableIncome - slab.incomeFrom) * slab.taxPercent / 100;
+        if (taxCalc.taxableIncome > slab.incomeFrom) {
+            if ((slab.incomeTo && taxCalc.taxableIncome <= slab.incomeTo) || !slab.incomeTo) {
+                let taxValue = (taxCalc.taxableIncome - slab.incomeFrom) * slab.taxPercent / 100;
+                let copiedSlab = structuredClone(slab)
+                copiedSlab.incomeTo = taxCalc.taxableIncome
+                taxCalc.addTax({ slab: copiedSlab, value: taxValue, displayName: calculateDisplayName(copiedSlab) })
+            } else if (slab.incomeTo && taxCalc.taxableIncome > slab.incomeTo) {
+                let taxValue = (slab.incomeTo - slab.incomeFrom) * slab.taxPercent / 100;
+                taxCalc.addTax({ slab: slab, value: taxValue, displayName: calculateDisplayName(slab) })
             }
         }
     }
-    return tax;
+    return taxCalc;
 }
 
 export function calculatorReducer(state: CalculatorState, action: ReducerAction) {
     if (action.type === "form_submit") {
-        let newState = {
+        let newState: CalculatorState = {
             oldTaxRegime: {
-                value: calculateTax(oldTax, action.income, action.deductions),
-                isGreen: false
+                calc: calculateTax(oldTax, action.income, action.deductions),
+                isGreen: false,
+                source: oldTax,
             },
             newTaxRegime: {
-                value: calculateTax(newTax, action.income, action.deductions),
-                isGreen: false
+                calc: calculateTax(newTax, action.income, action.deductions),
+                isGreen: false,
+                source: newTax,
             },
             isResultVisible: true,
         }
-        if (newState.newTaxRegime.value < newState.oldTaxRegime.value) {
-            newState.newTaxRegime.isGreen = true;
+        if (newState.newTaxRegime!!.calc.tax < newState.oldTaxRegime!!.calc.tax) {
+            newState.newTaxRegime!!.isGreen = true;
+        } else if (newState.newTaxRegime!!.calc.tax > newState.oldTaxRegime!!.calc.tax) {
+            newState.oldTaxRegime!!.isGreen = true;
         } else {
-            newState.oldTaxRegime.isGreen = true;
+            newState.oldTaxRegime!!.isGreen = true;
+            newState.newTaxRegime!!.isGreen = true;
         }
         return newState;
     }
