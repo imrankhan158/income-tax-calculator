@@ -14,7 +14,7 @@ export default function Home() {
             <h1 className='font-medium text-xl'>Income Tax Calculator</h1>
             <span className='text-gray-500'>According to latest Budget 2023</span>
           </div>
-          <div className="overflow-hidden bg-white shadow sm:rounded-lg p-4 mt-4 rounded-md">
+          <div className="overflow-hidden bg-white dark:bg-gray-800 shadow sm:rounded-lg p-4 mt-4 rounded-md">
             <Calculator />
           </div>
         </div>
