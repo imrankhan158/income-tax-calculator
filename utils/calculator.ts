@@ -1,5 +1,5 @@
 import { newTax, oldTax } from "./constants"
-import { TaxSlab, TaxStructure } from "./types"
+import { TaxCalcDeduction, TaxSlab, TaxStructure } from "./types"
 
 export type TaxResult = {
     calc: TaxCalc,
@@ -9,10 +9,6 @@ export type TaxResult = {
 
 export type TaxCalcStep = {
     slab: TaxSlab,
-    displayName: string,
-    value: number,
-}
-export type TaxCalcDeduction = {
     displayName: string,
     value: number,
 }
@@ -63,12 +59,16 @@ export type ReducerAction = {
     type: string,
     income: number,
     deductions: number,
+    addStandardDeduction: boolean,
 }
 
-function calculateTax(taxStructure: TaxStructure, income: number, deductions: number): TaxCalc {
+function calculateTax(taxStructure: TaxStructure, income: number, deductions: number, addStandardDeduction: boolean): TaxCalc {
     let taxCalc = new TaxCalc(income);
+    if (addStandardDeduction && income >= taxStructure.standardDeductions.when) {
+        taxCalc.applyDeductions(taxStructure.standardDeductions)
+    }
     if (taxStructure.deductionsApplicable) {
-        taxCalc.applyDeductions({ displayName: 'Deductions', value: deductions })
+        taxCalc.applyDeductions({ displayName: 'Other deductions', value: deductions })
     }
     if (taxCalc.taxableIncome <= taxStructure.taxRebate) {
         taxCalc.setTaxRebate(true);
@@ -94,24 +94,21 @@ export function calculatorReducer(state: CalculatorState, action: ReducerAction)
     if (action.type === "form_submit") {
         let newState: CalculatorState = {
             oldTaxRegime: {
-                calc: calculateTax(oldTax, action.income, action.deductions),
+                calc: calculateTax(oldTax, action.income, action.deductions, action.addStandardDeduction),
                 isGreen: false,
                 source: oldTax,
             },
             newTaxRegime: {
-                calc: calculateTax(newTax, action.income, action.deductions),
+                calc: calculateTax(newTax, action.income, action.deductions, action.addStandardDeduction),
                 isGreen: false,
                 source: newTax,
             },
             isResultVisible: true,
         }
-        if (newState.newTaxRegime!!.calc.tax < newState.oldTaxRegime!!.calc.tax) {
+        if (newState.newTaxRegime!!.calc.tax <= newState.oldTaxRegime!!.calc.tax) {
             newState.newTaxRegime!!.isGreen = true;
         } else if (newState.newTaxRegime!!.calc.tax > newState.oldTaxRegime!!.calc.tax) {
             newState.oldTaxRegime!!.isGreen = true;
-        } else {
-            newState.oldTaxRegime!!.isGreen = true;
-            newState.newTaxRegime!!.isGreen = true;
         }
         return newState;
     }

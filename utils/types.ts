@@ -9,4 +9,14 @@ export type TaxStructure = {
     slabs: TaxSlab[],
     taxRebate: number,
     displayName: string,
+    standardDeductions: StandardDeduction,
 }
+
+export type TaxCalcDeduction = {
+    displayName: string,
+    value: number,
+}
+
+export type StandardDeduction = {
+    when: number,
+} & TaxCalcDeduction

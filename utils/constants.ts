@@ -4,6 +4,11 @@ export const oldTax: TaxStructure = {
     deductionsApplicable: true,
     taxRebate: 500000,
     displayName: "Old tax regime",
+    standardDeductions: {
+        displayName: 'Standard deduction',
+        value: 50000,
+        when: 0,
+    },
     slabs: [
         {
             incomeFrom: 0,
@@ -31,6 +36,11 @@ export const newTax: TaxStructure = {
     deductionsApplicable: false,
     taxRebate: 700000,
     displayName: "New tax regime",
+    standardDeductions: {
+        displayName: 'Standard deduction',
+        value: 52500,
+        when: 1550000,
+    },
     slabs: [
         {
             incomeFrom: 0,
